@@ -5,6 +5,8 @@ pipeline {
         REPO = 'https://github.com/Become-DevOps/proj.git'
         IMAGE = 'my-html-site'
         PORT = '8080'
+        QA_HOST = '172.31.92.255'
+        QA_USER = 'sree'
     }
 
     stages {
@@ -14,28 +16,20 @@ pipeline {
             }
         }
 
-        stage('Install Docker on QA Node') {
-            steps {
-                ansiblePlaybook(
-                    inventory: '/etc/ansible/hosts',
-                    playbook: 'install_tools.yml'
-                )
-            }
-        }
-
         stage('Build Docker Image on QA') {
             steps {
-                sh '''
-                ssh sree@172.31.92.255 "cd ~/proj && docker build -t $IMAGE ."
-                '''
+                sh """
+                scp -r . ${QA_USER}@${QA_HOST}:/home/${QA_USER}/proj
+                ssh ${QA_USER}@${QA_HOST} "cd /home/${QA_USER}/proj && docker build -t ${IMAGE} ."
+                """
             }
         }
 
         stage('Run Docker Container on QA') {
             steps {
-                sh '''
-                ssh sree@172.31.92.255 "docker rm -f $IMAGE || true && docker run -d -p $PORT:80 --name $IMAGE $IMAGE"
-                '''
+                sh """
+                ssh ${QA_USER}@${QA_HOST} "docker rm -f ${IMAGE} || true && docker run -d -p ${PORT}:80 --name ${IMAGE} ${IMAGE}"
+                """
             }
         }
     }
